@@ -239,7 +239,7 @@ tuple<vector<vector<Leaf>>, double> find_k_partite_clique(vector<vector<Leaf>>al
 
 
 
-vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vector<Leaf>> all_tree_leaves, double eps, int label, int neg_label, int num_classes, int feature_start, bool one_attr, int only_attr){
+vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vector<Leaf>> all_tree_leaves, double eps, int label, int neg_label, int num_classes, int feature_start, bool one_attr, int only_attr, interval_map<int,Interval> feature_bound){
 
   // if neg_label < 0 assume binary model, all trees are used
   cout << "all tree leaves size: " << all_tree_leaves.size() << std::endl;
@@ -263,7 +263,26 @@ vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vect
         }
         */
         if ((all_tree_leaves[i][j].box.find(-100) == all_tree_leaves[i][j].box.end()) && point_box_dist(x, all_tree_leaves[i][j].box, -1, feature_start, one_attr, only_attr)<=eps) {
-          one_tree_reachable_leaves.push_back(all_tree_leaves[i][j]);
+          if (feature_bound == NULL) {
+            one_tree_reachable_leaves.push_back(all_tree_leaves[i][j]);
+          } else {
+            // check whether current leaf's box has intersection with the box that determines expected bound for features.
+            // if not, don't add this leaf to reachable leaves
+            bool hasIntersection = true;
+            for (pair<int, Interval> element : all_tree_leaves[i][j].box) {
+              int feature_id = element.first;
+              Interval leaf_bound = element.second;
+              Interval expected_bound = feature_bound[feature_id]
+
+              if ( (leaf_bound.upper < expected_bound.lower) || (expected_bound.upper < leaf_bound.lower) ) {
+                  hasIntersection = false;
+              }
+            }
+
+            if (hasIntersection) {
+              one_tree_reachable_leaves.push_back(all_tree_leaves[i][j]);
+            }
+          }
         }
       }
       if (one_tree_reachable_leaves.size() < 1)
@@ -271,7 +290,7 @@ vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vect
       all_tree_reachable_leaves.push_back(one_tree_reachable_leaves);
     }
   }
-  //cout << "\nnumber of trees used:  " << all_tree_reachable_leaves.size() << '\n';
+  //cout << "\nnumber of trees used:  " << all_tree_reachable_leaves.size() << '\n'; 
   //cout << "All reacheable leaves:" << std::endl;
   //print_trees(all_tree_reachable_leaves);
   return all_tree_reachable_leaves;
@@ -280,9 +299,14 @@ vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vect
 
 
 
-vector<double> find_multi_level_best_score (const vector<double>& x, int label, int neg_label, vector<vector<Leaf>> all_tree_leaves, int num_classes, int max_level, double eps, int max_clique, int feature_start, bool one_attr, int only_attr, bool must_use_dp){
+vector<double> find_multi_level_best_score (const vector<double>& x, int label, int neg_label, vector<vector<Leaf>> all_tree_leaves, int num_classes, int max_level, double eps, int max_clique, int feature_start, bool one_attr, int only_attr, bool must_use_dp, interval_map<int,Interval> feature_bound = NULL){
+  
+  // interval_map feature_bound: new argument encoding the valid range for each feature
+  // mapping from feature name to an interval containing 
+
+
   //pick the reachable leaves on each tree
-  vector<vector<Leaf>> all_tree_reachable_leaves = find_reachable_leaves(x, all_tree_leaves, eps, label, neg_label, num_classes, feature_start, one_attr, only_attr);  
+  vector<vector<Leaf>> all_tree_reachable_leaves = find_reachable_leaves(x, all_tree_leaves, eps, label, neg_label, num_classes, feature_start, one_attr, only_attr, feature_bound);  
   //shuffle trees
   //auto rng = std::default_random_engine {};
   //std::shuffle(std::begin(all_tree_reachable_leaves), std::end(all_tree_reachable_leaves), rng);
