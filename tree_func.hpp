@@ -272,7 +272,7 @@ vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vect
             for (pair<int, Interval> element : all_tree_leaves[i][j].box) {
               int feature_id = element.first;
               Interval leaf_bound = element.second;
-              Interval expected_bound = feature_bound[feature_id]
+              Interval expected_bound = feature_bound[feature_id];
 
               if ( (leaf_bound.upper < expected_bound.lower) || (expected_bound.upper < leaf_bound.lower) ) {
                   hasIntersection = false;
