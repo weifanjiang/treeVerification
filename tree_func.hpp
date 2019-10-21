@@ -300,10 +300,8 @@ vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vect
 
 
 vector<double> find_multi_level_best_score (const vector<double>& x, int label, int neg_label, vector<vector<Leaf>> all_tree_leaves, int num_classes, int max_level, double eps, int max_clique, int feature_start, bool one_attr, int only_attr, bool must_use_dp, interval_map<int,Interval> feature_bound = NULL){
-  
-  // interval_map feature_bound: new argument encoding the valid range for each feature
-  // mapping from feature name to an interval containing 
-
+  // interval_map feature_bound: new argument encoding the allowed range for each feature
+  // mapping from feature name to an Interval struct
 
   //pick the reachable leaves on each tree
   vector<vector<Leaf>> all_tree_reachable_leaves = find_reachable_leaves(x, all_tree_leaves, eps, label, neg_label, num_classes, feature_start, one_attr, only_attr, feature_bound);  
