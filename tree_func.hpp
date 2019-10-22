@@ -294,16 +294,21 @@ vector<double> find_multi_level_best_score (const vector<double>& x, int label, 
   // B[i] = (max(feature_i_lo, x[i] - eps), min(feature_i_hi, x[i] + eps)]
 
   interval_map<int,Interval> feature_bound_for_x;
-  for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
-    int attr = it->first;
-    double l = it->second.lower;
-    double u = it->second.upper; 
-    int attr_x = attr - feature_start;
-    double x_lo = max(x[attr_x] - eps, l);
-    double x_hi = min(x[attr_x] + eps, u);
 
-    Interval bound_for_x = {x_lo, x_hi};
-    feature_bound_for_x[attr] = bound_for_x;
+  if (feature_bound == NULL) {
+    for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
+      int attr = it->first;
+      double l = it->second.lower;
+      double u = it->second.upper; 
+      int attr_x = attr - feature_start;
+      double x_lo = max(x[attr_x] - eps, l);
+      double x_hi = min(x[attr_x] + eps, u);
+
+      Interval bound_for_x = {x_lo, x_hi};
+      feature_bound_for_x[attr] = bound_for_x;
+    }
+  } else {
+    feature_bound_for_x = NULL;
   }
 
   //pick the reachable leaves on each tree
