@@ -295,7 +295,7 @@ vector<double> find_multi_level_best_score (const vector<double>& x, int label, 
 
   interval_map<int,Interval> feature_bound_for_x;
 
-  if (feature_bound == NULL) {
+  if (feature_bound != NULL) {
     for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
       int attr = it->first;
       double l = it->second.lower;
