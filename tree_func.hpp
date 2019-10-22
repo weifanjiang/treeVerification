@@ -262,26 +262,13 @@ vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vect
           cout << it->first << ": "<< x[it->first-feature_start] << '\t';
         }
         */
-        if ((all_tree_leaves[i][j].box.find(-100) == all_tree_leaves[i][j].box.end()) && point_box_dist(x, all_tree_leaves[i][j].box, -1, feature_start, one_attr, only_attr)<=eps) {
-          if (feature_bound == NULL) {
+        if (feature_bound == NULL) {
+          if ((all_tree_leaves[i][j].box.find(-100) == all_tree_leaves[i][j].box.end()) && point_box_dist(x, all_tree_leaves[i][j].box, -1, feature_start, one_attr, only_attr)<=eps) {
             one_tree_reachable_leaves.push_back(all_tree_leaves[i][j]);
-          } else {
-            // check whether current leaf's box has intersection with the box that determines expected bound for features.
-            // if not, don't add this leaf to reachable leaves
-            bool hasIntersection = true;
-            for (pair<int, Interval> element : all_tree_leaves[i][j].box) {
-              int feature_id = element.first;
-              Interval leaf_bound = element.second;
-              Interval expected_bound = feature_bound[feature_id];
-
-              if ( (leaf_bound.upper < expected_bound.lower) || (expected_bound.upper < leaf_bound.lower) ) {
-                  hasIntersection = false;
-              }
-            }
-
-            if (hasIntersection) {
-              one_tree_reachable_leaves.push_back(all_tree_leaves[i][j]);
-            }
+          }
+        } else {
+          if (box_intersec(all_tree_leaves[i][j].box, feature_bound)) {
+            one_tree_reachable_leaves.push_back(all_tree_leaves[i][j]);
           }
         }
       }
@@ -303,8 +290,24 @@ vector<double> find_multi_level_best_score (const vector<double>& x, int label, 
   // interval_map feature_bound: new argument encoding the allowed range for each feature
   // mapping from feature name to an Interval struct
 
+  // Construct Box B such that, for feature i:
+  // B[i] = (max(feature_i_lo, x[i] - eps), min(feature_i_hi, x[i] + eps)]
+
+  interval_map<int,Interval> feature_bound_for_x;
+  for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
+    int attr = it->first;
+    double l = it->second.lower;
+    double u = it->second.upper; 
+    int attr_x = attr - feature_start;
+    double x_lo = max(x[attr_x] - eps, l);
+    double x_hi = min(x[attr_x] + eps, u);
+
+    Interval bound_for_x = {x_lo, x_hi};
+    feature_bound_for_x[attr] = bound_for_x;
+  }
+
   //pick the reachable leaves on each tree
-  vector<vector<Leaf>> all_tree_reachable_leaves = find_reachable_leaves(x, all_tree_leaves, eps, label, neg_label, num_classes, feature_start, one_attr, only_attr, feature_bound);  
+  vector<vector<Leaf>> all_tree_reachable_leaves = find_reachable_leaves(x, all_tree_leaves, eps, label, neg_label, num_classes, feature_start, one_attr, only_attr, feature_bound_for_x);  
   //shuffle trees
   //auto rng = std::default_random_engine {};
   //std::shuffle(std::begin(all_tree_reachable_leaves), std::end(all_tree_reachable_leaves), rng);
