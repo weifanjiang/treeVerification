@@ -179,7 +179,7 @@ int main(int argc, char** argv){
       bool robust = true;
       if (num_classes <= 2){ 
         cout << "\n^^^^^^^^^^^^^^^^ binary model  ^^^^^^^^^^^^^^^\n";
-        vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp); 
+        vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp, NULL); 
         
         robust = (ori_y[n]<0.5&&sum_best.back()<0)||(ori_y[n]>0.5&&sum_best.back()>0);
       }
@@ -188,7 +188,7 @@ int main(int argc, char** argv){
         for (int neg_label=0; neg_label<num_classes; neg_label++){
           if (neg_label != ori_y[n]){
             cout << "\n^^^^^^^^^^^^^^^^ original class: " << ori_y[n]  << " target class: " << neg_label << " starts ^^^^^^^^^^^^^^^\n";
-            vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp);
+            vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp, NULL);
             cout << "\n best score for each level:\t";
             for (int i=0;i<sum_best.size(); i++){
               cout << sum_best[i] <<'\t'; 
