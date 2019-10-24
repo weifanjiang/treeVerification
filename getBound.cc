@@ -38,6 +38,12 @@ int main(int argc, char** argv){
   bool one_attr;
   int only_attr;
   int feature_start;
+  string bound_file;
+
+  if (param.find("bound") != param.end()){
+    bound_file = param["bound"];
+    cout << bound_file << " is bound file\n";
+  }
 
   if (param.find("inputs") != param.end()){
     ori_file = param["inputs"];
@@ -130,8 +136,19 @@ int main(int argc, char** argv){
   
   
   cout << "\nfeature starts at "<< feature_start << "\n";
-  
 
+  ifstream bound_data(bound_file);
+  json bound_values;
+  bound_data >> bound_values;
+
+  // Construct initial box B
+  interval_map<int,Interval> feature_bound;
+  Interval bound_for_x;
+  for (auto& element : bound_values.items()) {
+    bound_for_x = {element.value()[0], element.value()[1]};
+    feature_bound[stoi(element.key())] = bound_for_x;
+  }
+  
   // read data inputs 
   vector<vector<double>> ori_X;
   vector<int> ori_y;  
@@ -179,7 +196,7 @@ int main(int argc, char** argv){
       bool robust = true;
       if (num_classes <= 2){ 
         cout << "\n^^^^^^^^^^^^^^^^ binary model  ^^^^^^^^^^^^^^^\n";
-        vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp, NULL); 
+        vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp); 
         
         robust = (ori_y[n]<0.5&&sum_best.back()<0)||(ori_y[n]>0.5&&sum_best.back()>0);
       }
@@ -188,7 +205,7 @@ int main(int argc, char** argv){
         for (int neg_label=0; neg_label<num_classes; neg_label++){
           if (neg_label != ori_y[n]){
             cout << "\n^^^^^^^^^^^^^^^^ original class: " << ori_y[n]  << " target class: " << neg_label << " starts ^^^^^^^^^^^^^^^\n";
-            vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp, NULL);
+            vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp);
             cout << "\n best score for each level:\t";
             for (int i=0;i<sum_best.size(); i++){
               cout << sum_best[i] <<'\t'; 

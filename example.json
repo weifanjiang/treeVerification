@@ -1,6 +1,7 @@
-{   
-    "inputs":       "example_breast_cancer0.libsvm", 
+{
+    "inputs":       "example_breast_cancer0.libsvm",
     "model":        "breast_cancer_robust.0008.json",
+    "bound":        "breast_cancer_bound.json",
     "start_idx":    0,
     "num_attack":   500,
     "eps_init":     0.3,
