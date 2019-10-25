@@ -64,7 +64,7 @@ void dfs (json tree, int treeid, interval_map<int, Interval> p_box, vector<Leaf>
 
 
 
-tuple<vector<vector<Leaf>>, double> find_k_partite_clique(vector<vector<Leaf>>all_tree_reachable_leaves, int max_clique, double eps, int label, int neg_label, int num_classes, bool dp){
+tuple<vector<vector<Leaf>>, double> find_k_partite_clique(vector<vector<Leaf>>all_tree_reachable_leaves, int max_clique, int label, int neg_label, int num_classes, bool dp){
   // label is the point's true label
   // if a leaf's label is neg_label, we minus instead of add
   // neg_label is valid only if it's >=0
@@ -239,7 +239,7 @@ tuple<vector<vector<Leaf>>, double> find_k_partite_clique(vector<vector<Leaf>>al
 
 
 
-vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vector<Leaf>> all_tree_leaves, double eps, int label, int neg_label, int num_classes, int feature_start, bool one_attr, int only_attr, interval_map<int,Interval> feature_bound){
+vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vector<Leaf>> all_tree_leaves, int label, int neg_label, int num_classes, int feature_start, bool one_attr, int only_attr, interval_map<int,Interval> feature_bound){
 
   // if neg_label < 0 assume binary model, all trees are used
   cout << "all tree leaves size: " << all_tree_leaves.size() << std::endl;
@@ -284,11 +284,18 @@ vector<double> find_multi_level_best_score (const vector<double>& x, int label, 
   // interval_map feature_bound: new argument encoding the allowed range for each feature
   // mapping from feature name to an Interval struct
 
-  // Construct Box B such that, for feature i:
-  // B[i] = (max(feature_i_lo, x[i] - eps), min(feature_i_hi, x[i] + eps)]
+  interval_map<int,Interval> feature_bound_for_x;
+  for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
+    int feature_key = it->first;
+    double lower = min(it->second.lower, eps);
+    double upper = min(it->second.upper, eps);
+    double x_val = x[feature_key - feature_start];
+    Interval current_feature_bound = {x_val - lower, x_val + upper};
+    feature_bound_for_x[feature_key] = current_feature_bound;
+  }
 
   //pick the reachable leaves on each tree
-  vector<vector<Leaf>> all_tree_reachable_leaves = find_reachable_leaves(x, all_tree_leaves, eps, label, neg_label, num_classes, feature_start, one_attr, only_attr, feature_bound);  
+  vector<vector<Leaf>> all_tree_reachable_leaves = find_reachable_leaves(x, all_tree_leaves, label, neg_label, num_classes, feature_start, one_attr, only_attr, feature_bound_for_x);  
   //shuffle trees
   //auto rng = std::default_random_engine {};
   //std::shuffle(std::begin(all_tree_reachable_leaves), std::end(all_tree_reachable_leaves), rng);
@@ -297,12 +304,7 @@ vector<double> find_multi_level_best_score (const vector<double>& x, int label, 
   cout << "number of reachable leaves on each tree:" << '\n';
   for (int i=0; i< all_tree_reachable_leaves.size(); i++){
     cout << all_tree_reachable_leaves[i].size() << '\n';
-    for (int j=0; j<all_tree_reachable_leaves[i].size();j++){
-      cout<<", "<<all_tree_reachable_leaves[i][j].treeid<<","<<all_tree_reachable_leaves[i][j].nodeid;
-    }
-    cout<<'\n';
   }
-  cout << '\n'; 
   
   vector<double> sum_best;
   vector<vector<Leaf>> new_nodes_array = all_tree_reachable_leaves;
@@ -312,9 +314,9 @@ vector<double> find_multi_level_best_score (const vector<double>& x, int label, 
     bool use_dp = (l==max_level-1) && must_use_dp;
     tuple<vector<vector<Leaf>>, double> res;
     if (num_classes > 2 && l == 0)
-      res = find_k_partite_clique(new_nodes_array, max_clique, eps, label, neg_label, num_classes, use_dp);
+      res = find_k_partite_clique(new_nodes_array, max_clique, label, neg_label, num_classes, use_dp);
     else
-      res = find_k_partite_clique(new_nodes_array, max_clique, eps, label, -1, num_classes, use_dp);
+      res = find_k_partite_clique(new_nodes_array, max_clique, label, -1, num_classes, use_dp);
     sum_best.push_back(get<1>(res)); 
     new_nodes_array = get<0>(res); 
     if (new_nodes_array.size() <=1 ){

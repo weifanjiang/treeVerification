@@ -16,7 +16,6 @@ using namespace std;
 using namespace std::chrono;
 using json = nlohmann::json;
 
-
 int main(int argc, char** argv){
 
   high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -71,13 +70,6 @@ int main(int argc, char** argv){
   }
   else {
     throw invalid_argument("num_attack is missing in config file");
-  }
-
-  if (param.find("eps_init") != param.end()){
-    eps_init = double(param["eps_init"]);
-  }
-  else {
-    throw invalid_argument("eps_init is missing in config file");
   }
 
   if (param.find("max_clique") != param.end()){
@@ -144,9 +136,17 @@ int main(int argc, char** argv){
   // Construct initial box B
   interval_map<int,Interval> feature_bound;
   Interval bound_for_x;
+  eps_init = 0.0;
   for (auto& element : bound_values.items()) {
     bound_for_x = {element.value()[0], element.value()[1]};
-    feature_bound[stoi(element.key())] = bound_for_x;
+    if (eps_init == 0.0) {
+      eps_init = bound_for_x.lower;
+      eps_init = max(eps_init, bound_for_x.upper);
+    } else {
+      eps_init = max(eps_init, bound_for_x.lower);
+      eps_init = max(eps_init, bound_for_x.upper);
+      feature_bound[stoi(element.key())] = bound_for_x;
+    }
   }
   
   // read data inputs 
@@ -196,7 +196,7 @@ int main(int argc, char** argv){
       bool robust = true;
       if (num_classes <= 2){ 
         cout << "\n^^^^^^^^^^^^^^^^ binary model  ^^^^^^^^^^^^^^^\n";
-        vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp); 
+        vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp, feature_bound); 
         
         robust = (ori_y[n]<0.5&&sum_best.back()<0)||(ori_y[n]>0.5&&sum_best.back()>0);
       }
@@ -205,7 +205,7 @@ int main(int argc, char** argv){
         for (int neg_label=0; neg_label<num_classes; neg_label++){
           if (neg_label != ori_y[n]){
             cout << "\n^^^^^^^^^^^^^^^^ original class: " << ori_y[n]  << " target class: " << neg_label << " starts ^^^^^^^^^^^^^^^\n";
-            vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp);
+            vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp, feature_bound);
             cout << "\n best score for each level:\t";
             for (int i=0;i<sum_best.size(); i++){
               cout << sum_best[i] <<'\t'; 

@@ -1,10 +1,9 @@
 {
     "inputs":       "example_breast_cancer0.libsvm",
     "model":        "breast_cancer_robust.0008.json",
-    "bound":        "breast_cancer_bound.json",
+    "bound":        "breast_cancer_feature_bound.json",
     "start_idx":    0,
     "num_attack":   500,
-    "eps_init":     0.3,
     "max_clique":   2,
     "max_search":   10,
     "max_level":    1,
