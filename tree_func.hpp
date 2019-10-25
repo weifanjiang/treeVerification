@@ -280,15 +280,15 @@ vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vect
 
 
 
-vector<double> find_multi_level_best_score (const vector<double>& x, int label, int neg_label, vector<vector<Leaf>> all_tree_leaves, int num_classes, int max_level, double eps, int max_clique, int feature_start, bool one_attr, int only_attr, bool must_use_dp, interval_map<int,Interval> feature_bound){
+vector<double> find_multi_level_best_score (const vector<double>& x, int label, int neg_label, vector<vector<Leaf>> all_tree_leaves, int num_classes, int max_level, int max_clique, int feature_start, bool one_attr, int only_attr, bool must_use_dp, interval_map<int,Interval> feature_bound){
   // interval_map feature_bound: new argument encoding the allowed range for each feature
   // mapping from feature name to an Interval struct
 
   interval_map<int,Interval> feature_bound_for_x;
   for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
     int feature_key = it->first;
-    double lower = min(it->second.lower, eps);
-    double upper = min(it->second.upper, eps);
+    double lower = it->second.lower;
+    double upper = it->second.upper;
     double x_val = x[feature_key - feature_start];
     Interval current_feature_bound = {x_val - lower, x_val + upper};
     feature_bound_for_x[feature_key] = current_feature_bound;

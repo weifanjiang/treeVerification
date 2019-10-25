@@ -16,6 +16,17 @@ using namespace std;
 using namespace std::chrono;
 using json = nlohmann::json;
 
+double compute_r(interval_map<int,Interval> box) {
+  double max_dist = 0.0;
+  for (interval_map<int, Interval>::const_iterator it = box.cbegin(); it != box.cend(); ++it) {
+    double lo = it->second.lower;
+    double hi = it->second.upper;
+    max_dist = max(max_dist, lo);
+    max_dist = max(max_dist, hi);
+  }
+  return max_dist;
+}
+
 int main(int argc, char** argv){
 
   high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -28,7 +39,6 @@ int main(int argc, char** argv){
   string tree_file;
   int start_idx;
   int num_attack;
-  double eps_init;
   int max_clique;
   int max_search;
   int max_level;
@@ -124,7 +134,7 @@ int main(int argc, char** argv){
   }
 
   if (num_classes < 2) { num_classes = 2; }
-  cout << "inputs: " << ori_file << "\nmodel: "<< tree_file  << "\nstart_idx: " << start_idx << "\nnum_attack: " << num_attack << "\neps_init: " << eps_init << "\nmax_clique: " << max_clique << "\nmax_search: " << max_search << "\nmax_level: " << max_level << "\nnum_classes: " << num_classes <<"\ndp: " << dp << "\none_attr: "<< one_attr << "\nonly_attr: "<< only_attr <<'\n';
+  cout << "inputs: " << ori_file << "\nmodel: "<< tree_file  << "\nstart_idx: " << start_idx << "\nnum_attack: " << num_attack << "\nmax_clique: " << max_clique << "\nmax_search: " << max_search << "\nmax_level: " << max_level << "\nnum_classes: " << num_classes <<"\ndp: " << dp << "\none_attr: "<< one_attr << "\nonly_attr: "<< only_attr <<'\n';
   
   
   cout << "\nfeature starts at "<< feature_start << "\n";
@@ -136,17 +146,9 @@ int main(int argc, char** argv){
   // Construct initial box B
   interval_map<int,Interval> feature_bound;
   Interval bound_for_x;
-  eps_init = 0.0;
   for (auto& element : bound_values.items()) {
     bound_for_x = {element.value()[0], element.value()[1]};
-    if (eps_init == 0.0) {
-      eps_init = bound_for_x.lower;
-      eps_init = max(eps_init, bound_for_x.upper);
-    } else {
-      eps_init = max(eps_init, bound_for_x.lower);
-      eps_init = max(eps_init, bound_for_x.upper);
-      feature_bound[stoi(element.key())] = bound_for_x;
-    }
+    feature_bound[stoi(element.key())] = bound_for_x;
   }
   
   // read data inputs 
@@ -184,19 +186,17 @@ int main(int argc, char** argv){
   int n_initial_success = 0;
   for (int n=start_idx; n<num_attack+start_idx; n++){ //loop all points
     cout << "\n\n\n\n=================start index:" << start_idx << ", num of points:" << num_attack << ", current index:" << n << ", current label: "<< ori_y[n]  <<" =================\n";
-    double eps = eps_init;
     high_resolution_clock::time_point t3 = high_resolution_clock::now();
     vector<bool> rob_log;
-    vector<double> eps_log;
+    vector<interval_map<int,Interval>> eps_log;
     int last_rob = -1;
     int last_unrob = -1;
     for (int search_step=0; search_step<max_search; search_step++){
-      cout << "\n\n************** eps=" << eps << " starts ******************\n";
       
       bool robust = true;
       if (num_classes <= 2){ 
         cout << "\n^^^^^^^^^^^^^^^^ binary model  ^^^^^^^^^^^^^^^\n";
-        vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp, feature_bound); 
+        vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, max_clique, feature_start, one_attr, only_attr, dp, feature_bound); 
         
         robust = (ori_y[n]<0.5&&sum_best.back()<0)||(ori_y[n]>0.5&&sum_best.back()>0);
       }
@@ -205,7 +205,7 @@ int main(int argc, char** argv){
         for (int neg_label=0; neg_label<num_classes; neg_label++){
           if (neg_label != ori_y[n]){
             cout << "\n^^^^^^^^^^^^^^^^ original class: " << ori_y[n]  << " target class: " << neg_label << " starts ^^^^^^^^^^^^^^^\n";
-            vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, eps, max_clique, feature_start, one_attr, only_attr, dp, feature_bound);
+            vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, max_clique, feature_start, one_attr, only_attr, dp, feature_bound);
             cout << "\n best score for each level:\t";
             for (int i=0;i<sum_best.size(); i++){
               cout << sum_best[i] <<'\t'; 
@@ -223,9 +223,9 @@ int main(int argc, char** argv){
       if (search_step == 0 && robust) {
         n_initial_success += 1;
       }
-      cout << "Can model be guaranteed robust within eps " << eps << "? (0 for no, 1 for yes): " << robust  <<'\n';
+      cout << "Can model be guaranteed robust within this box? (0 for no, 1 for yes): " << robust  <<'\n';
       rob_log.push_back(robust);
-      eps_log.push_back(eps);
+      eps_log.push_back(feature_bound);
       if (robust) {
         last_rob = rob_log.size() - 1;
       }
@@ -234,27 +234,44 @@ int main(int argc, char** argv){
       }
 
       if (last_rob<0) {
-        eps = eps * 0.5;
+        interval_map<int,Interval> feature_bound_new;
+        for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
+          Interval current_feature_bound = {0.5 * it->second.lower, 0.5 * it->second.upper};
+          feature_bound_new[it->first] = current_feature_bound;
+        }
+        feature_bound = feature_bound_new;
       }
       else {
         if (last_unrob<0){ 
-          if (eps >= 1){
+          if (compute_r(feature_bound) >= 1){
             cout << "\n eps >=1, break binary search!\n";
             break;
           }
-          eps = min(eps * 2.0, 1.0);
-        }
-        else {
-          eps = 0.5 * (eps_log[last_rob] + eps_log[last_unrob]);
+          interval_map<int,Interval> feature_bound_new;
+          for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
+            Interval current_feature_bound = {min(1.0, 2.0 * it->second.lower), min(1.0, 2.0 * it->second.upper)};
+            feature_bound_new[it->first] = current_feature_bound;
+          }
+          feature_bound = feature_bound_new;
+        } else {
+          interval_map<int,Interval> feature_bound_new;
+          for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
+            int attr = it->first;
+            double lower = 0.5 * (eps_log[last_rob][attr].lower + eps_log[last_unrob][attr].lower);
+            double upper = 0.5 * (eps_log[last_rob][attr].upper + eps_log[last_unrob][attr].upper);
+            Interval current_feature_bound = {lower, upper};
+            feature_bound_new[it->first] = current_feature_bound;
+          }
+          feature_bound = feature_bound_new;
         }
       }
 
-      cout << "\n**************** this eps ends, next eps:" << eps  <<" *********************\n";
+      cout << "\n**************** this box ends, next box *********************\n";
     }
     
     double clique_bound = 0;
     if (last_rob>=0){
-      clique_bound = eps_log[last_rob];
+      clique_bound = compute_r(eps_log[last_rob]);
       avg_bound = avg_bound + clique_bound;
     }
     else{
@@ -267,7 +284,7 @@ int main(int argc, char** argv){
   double verified_err = 1.0 - n_initial_success / (double)num_attack;
   avg_bound = avg_bound / num_attack; 
   cout << "\nclique method average bound:" << avg_bound << endl;
-  cout << "verified error at epsilon " << eps_init << " = " << verified_err << endl;
+  cout << "verified error at initial box = " << verified_err << endl;
   high_resolution_clock::time_point t2 = high_resolution_clock::now();
   auto total_duration = duration_cast<microseconds>( t2 - t1 ).count();
   cout << " total running time: " << double(total_duration)/1000000.0 << " seconds\n";
