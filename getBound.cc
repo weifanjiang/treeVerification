@@ -9,6 +9,7 @@
 #include <math.h>
 #include <chrono>
 #include <random>
+#include <cmath>
 #include "svmreader.hpp"
 #include "tree_func.hpp"
 
@@ -232,24 +233,40 @@ int main(int argc, char** argv){
       else {
         last_unrob = rob_log.size() - 1;
       }
-
+      float current_bound = compute_r(feature_bound);
       if (last_rob<0) {
         interval_map<int,Interval> feature_bound_new;
         for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
-          Interval current_feature_bound = {0.5 * it->second.lower, 0.5 * it->second.upper};
+          double lower = it->second.lower;
+          double upper = it->second.upper;
+          if (abs(lower - current_bound) < 0.05) {
+              lower = lower * 0.5;
+          }
+          if (abs(upper - current_bound) < 0.05) {
+              upper = upper * 0.5;
+          }
+          Interval current_feature_bound = {lower, upper};
           feature_bound_new[it->first] = current_feature_bound;
         }
         feature_bound = feature_bound_new;
       }
       else {
         if (last_unrob<0){ 
-          if (compute_r(feature_bound) >= 1){
+          if (current_bound >= 1){
             cout << "\n eps >=1, break binary search!\n";
             break;
           }
           interval_map<int,Interval> feature_bound_new;
           for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
-            Interval current_feature_bound = {min(1.0, 2.0 * it->second.lower), min(1.0, 2.0 * it->second.upper)};
+            double lower = it->second.lower;
+            double upper = it->second.upper;
+            if (abs(lower - current_bound) < 0.001) {
+              lower = min(1.0, 2.0 * lower);
+            }
+            if (abs(upper - current_bound) < 0.001) {
+              upper = min(1.0, 2.0 * upper);
+            }
+            Interval current_feature_bound = {lower, upper};
             feature_bound_new[it->first] = current_feature_bound;
           }
           feature_bound = feature_bound_new;
@@ -257,8 +274,14 @@ int main(int argc, char** argv){
           interval_map<int,Interval> feature_bound_new;
           for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
             int attr = it->first;
-            double lower = 0.5 * (eps_log[last_rob][attr].lower + eps_log[last_unrob][attr].lower);
-            double upper = 0.5 * (eps_log[last_rob][attr].upper + eps_log[last_unrob][attr].upper);
+            double lower = it->second.lower;
+            double upper = it->second.upper;
+            if (abs(lower - current_bound) < 0.001) {
+              lower = 0.5 * (eps_log[last_rob][attr].lower + eps_log[last_unrob][attr].lower);
+            }
+            if (abs(upper - current_bound) < 0.001) {
+              upper = 0.5 * (eps_log[last_rob][attr].upper + eps_log[last_unrob][attr].upper);
+            }
             Interval current_feature_bound = {lower, upper};
             feature_bound_new[it->first] = current_feature_bound;
           }
