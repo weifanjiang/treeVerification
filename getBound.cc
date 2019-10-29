@@ -49,7 +49,6 @@ int main(int argc, char** argv){
   int only_attr;
   int feature_start;
   string bound_file;
-  double threshold = 0.1;
 
   if (param.find("bound") != param.end()){
     bound_file = param["bound"];
@@ -61,10 +60,6 @@ int main(int argc, char** argv){
   }
   else {
     throw invalid_argument("inputs datapoints in LIBSVM format is missing");
-  }
-
-  if (param.find("threshold") != param.end()){
-    threshold = param["threshold"];
   }
 
   if (param.find("model") != param.end()){
@@ -244,14 +239,8 @@ int main(int argc, char** argv){
       if (last_rob<0) {
         interval_map<int,Interval> feature_bound_new;
         for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
-          double lower = it->second.lower;
-          double upper = it->second.upper;
-          if (abs(lower - current_bound) < threshold) {
-              lower = lower * 0.5;
-          }
-          if (abs(upper - current_bound) < threshold) {
-              upper = upper * 0.5;
-          }
+          double lower = it->second.lower * 0.5;
+          double upper = it->second.upper * 0.5;
           Interval current_feature_bound = {lower, upper};
           feature_bound_new[it->first] = current_feature_bound;
         }

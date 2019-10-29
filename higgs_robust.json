@@ -3,7 +3,6 @@
     "model":        "higgs_robust.0050.json",
     "bound":        "higgs_feature_bound.json",
     "feature_start":0,
-    "threshold":    0.1,
     "start_idx":    0,
     "num_attack":   500,
     "max_clique":   2,
