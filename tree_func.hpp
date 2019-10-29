@@ -290,7 +290,7 @@ vector<double> find_multi_level_best_score (const vector<double>& x, int label, 
     double lower = it->second.lower;
     double upper = it->second.upper;
     double x_val = x[feature_key - feature_start];
-    Interval current_feature_bound = {x_val - lower, x_val + upper};
+    Interval current_feature_bound = {max(0.0, x_val - lower), min(1.0, x_val + upper)};
     feature_bound_for_x[feature_key] = current_feature_bound;
   }
 
