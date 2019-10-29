@@ -1,7 +1,8 @@
 {
-    "inputs":       "example_breast_cancer0.libsvm",
-    "model":        "breast_cancer_robust.0008.json",
-    "bound":        "breast_cancer_feature_bound.json",
+    "inputs":       "ori_higgs0",
+    "model":        "higgs_robust.0050.json",
+    "bound":        "higgs_feature_bound.json",
+    "feature_start":0,
     "threshold":    0.1,
     "start_idx":    0,
     "num_attack":   500,

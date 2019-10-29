@@ -49,6 +49,7 @@ int main(int argc, char** argv){
   int only_attr;
   int feature_start;
   string bound_file;
+  double threshold = 0.1;
 
   if (param.find("bound") != param.end()){
     bound_file = param["bound"];
@@ -60,6 +61,10 @@ int main(int argc, char** argv){
   }
   else {
     throw invalid_argument("inputs datapoints in LIBSVM format is missing");
+  }
+
+  if (param.find("threshold") != param.end()){
+    threshold = param["threshold"];
   }
 
   if (param.find("model") != param.end()){
@@ -185,6 +190,7 @@ int main(int argc, char** argv){
   num_attack = min(int(ori_X.size())-start_idx, num_attack);
   cout << "number of points: "<< num_attack  << '\n';
   int n_initial_success = 0;
+  double last_rob_eps = 1.0;
   for (int n=start_idx; n<num_attack+start_idx; n++){ //loop all points
     cout << "\n\n\n\n=================start index:" << start_idx << ", num of points:" << num_attack << ", current index:" << n << ", current label: "<< ori_y[n]  <<" =================\n";
     high_resolution_clock::time_point t3 = high_resolution_clock::now();
@@ -229,6 +235,7 @@ int main(int argc, char** argv){
       eps_log.push_back(feature_bound);
       if (robust) {
         last_rob = rob_log.size() - 1;
+        last_rob_eps = compute_r(feature_bound);
       }
       else {
         last_unrob = rob_log.size() - 1;
@@ -239,10 +246,10 @@ int main(int argc, char** argv){
         for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
           double lower = it->second.lower;
           double upper = it->second.upper;
-          if (abs(lower - current_bound) < 0.05) {
+          if (abs(lower - current_bound) < threshold) {
               lower = lower * 0.5;
           }
-          if (abs(upper - current_bound) < 0.05) {
+          if (abs(upper - current_bound) < threshold) {
               upper = upper * 0.5;
           }
           Interval current_feature_bound = {lower, upper};
@@ -260,12 +267,8 @@ int main(int argc, char** argv){
           for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
             double lower = it->second.lower;
             double upper = it->second.upper;
-            if (abs(lower - current_bound) < 0.001) {
-              lower = min(1.0, 2.0 * lower);
-            }
-            if (abs(upper - current_bound) < 0.001) {
-              upper = min(1.0, 2.0 * upper);
-            }
+            lower = min(1.0, 2.0 * lower);
+            upper = min(1.0, 2.0 * upper);
             Interval current_feature_bound = {lower, upper};
             feature_bound_new[it->first] = current_feature_bound;
           }
@@ -276,19 +279,14 @@ int main(int argc, char** argv){
             int attr = it->first;
             double lower = it->second.lower;
             double upper = it->second.upper;
-            if (abs(lower - current_bound) < 0.001) {
-              lower = 0.5 * (eps_log[last_rob][attr].lower + eps_log[last_unrob][attr].lower);
-            }
-            if (abs(upper - current_bound) < 0.001) {
-              upper = 0.5 * (eps_log[last_rob][attr].upper + eps_log[last_unrob][attr].upper);
-            }
+            lower = 0.5 * (eps_log[last_rob][attr].lower + eps_log[last_unrob][attr].lower);
+            upper = 0.5 * (eps_log[last_rob][attr].upper + eps_log[last_unrob][attr].upper);
             Interval current_feature_bound = {lower, upper};
             feature_bound_new[it->first] = current_feature_bound;
           }
           feature_bound = feature_bound_new;
         }
       }
-
       cout << "\n**************** this box ends, next box *********************\n";
     }
     
@@ -308,6 +306,7 @@ int main(int argc, char** argv){
   avg_bound = avg_bound / num_attack; 
   cout << "\nclique method average bound:" << avg_bound << endl;
   cout << "verified error at initial box = " << verified_err << endl;
+  cout << "best robust box's max dimension = " << last_rob_eps << endl;
   high_resolution_clock::time_point t2 = high_resolution_clock::now();
   auto total_duration = duration_cast<microseconds>( t2 - t1 ).count();
   cout << " total running time: " << double(total_duration)/1000000.0 << " seconds\n";
