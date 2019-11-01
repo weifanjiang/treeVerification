@@ -267,7 +267,8 @@ vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vect
         }
       }
       if (one_tree_reachable_leaves.size() < 1)
-        throw invalid_argument("number of reachable leaves less than 1, error!");
+        all_tree_reachable_leaves.clear();
+        return all_tree_reachable_leaves;
       all_tree_reachable_leaves.push_back(one_tree_reachable_leaves);
     }
   }
@@ -299,6 +300,11 @@ vector<double> find_multi_level_best_score (const vector<double>& x, int label, 
   //shuffle trees
   //auto rng = std::default_random_engine {};
   //std::shuffle(std::begin(all_tree_reachable_leaves), std::end(all_tree_reachable_leaves), rng);
+
+  if (all_tree_reachable_leaves.size() == 0) {
+      vector<double> res;
+      return res;
+  }
   
   //print number of reachable leaves on each tree
   cout << "number of reachable leaves on each tree:" << '\n';

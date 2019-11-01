@@ -179,6 +179,7 @@ int main(int argc, char** argv){
   num_attack = min(int(ori_X.size())-start_idx, num_attack);
   int n_initial_success = 0;
   double last_rob_eps = 1.0;
+  int succ_attack_count = 0;
   for (int n=start_idx; n<num_attack+start_idx; n++){ //loop all points
     high_resolution_clock::time_point t3 = high_resolution_clock::now();
     vector<bool> rob_log;
@@ -186,25 +187,34 @@ int main(int argc, char** argv){
     int last_rob = -1;
     int last_unrob = -1;
     for (int search_step=0; search_step<max_search; search_step++){
-      
       bool robust = true;
       if (num_classes <= 2){ 
         vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, max_clique, feature_start, one_attr, only_attr, dp, feature_bound); 
-        
+        if (sum_best.size() == 0) {
+          cout<< "\npoint "<< n << ": attack failed\n";
+          break;
+        }
         robust = (ori_y[n]<0.5&&sum_best.back()<0)||(ori_y[n]>0.5&&sum_best.back()>0);
       }
       else{
+        bool good = true;
         for (int neg_label=0; neg_label<num_classes; neg_label++){
           if (neg_label != ori_y[n]){
             vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, max_clique, feature_start, one_attr, only_attr, dp, feature_bound);
-            
+            if (sum_best.size() == 0) {
+              cout<< "\npoint "<< n << ": attack failed\n";
+              good = false;
+              break;
+            }
             robust = robust && (sum_best.back()>0);
             if (!robust){
               break;
             }
           }
         }
-      
+        if (!good) {
+          break;
+        }
       }
       // at the first search, evaluate the verified error 
       if (search_step == 0 && robust) {
@@ -265,6 +275,7 @@ int main(int argc, char** argv){
     if (last_rob>=0){
       clique_bound = compute_r(eps_log[last_rob]);
       avg_bound = avg_bound + clique_bound;
+      succ_attack_count += 1;
       cout<< "\npoint "<< n << ": robust epsilon is " << clique_bound << " " << endl;
     }
     else{
@@ -274,7 +285,7 @@ int main(int argc, char** argv){
     auto point_duration = duration_cast<microseconds>( t4 - t3).count();
   }
   double verified_err = 1.0 - n_initial_success / (double)num_attack;
-  avg_bound = avg_bound / num_attack; 
+  avg_bound = avg_bound / succ_attack_count; 
   cout << "\nclique method average bound:" << avg_bound << endl;
   cout << "verified error at initial box = " << verified_err << endl;
   cout << "best robust box's max dimension = " << last_rob_eps << endl;
