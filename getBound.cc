@@ -186,11 +186,13 @@ int main(int argc, char** argv){
     vector<interval_map<int,Interval>> eps_log;
     int last_rob = -1;
     int last_unrob = -1;
+    bool success = true;
     for (int search_step=0; search_step<max_search; search_step++){
       bool robust = true;
       if (num_classes <= 2){ 
         vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, max_clique, feature_start, one_attr, only_attr, dp, feature_bound); 
         if (sum_best.size() == 0) {
+          success = false;
           cout<< "\npoint "<< n << ": attack failed\n";
           break;
         }
@@ -213,6 +215,7 @@ int main(int argc, char** argv){
           }
         }
         if (!good) {
+          success = false;
           break;
         }
       }
@@ -269,6 +272,10 @@ int main(int argc, char** argv){
           feature_bound = feature_bound_new;
         }
       }
+    }
+
+    if (!success) {
+      continue;
     }
     
     double clique_bound = 0;

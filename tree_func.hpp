@@ -266,9 +266,10 @@ vector<vector<Leaf>> find_reachable_leaves (const vector<double>& x, vector<vect
           one_tree_reachable_leaves.push_back(all_tree_leaves[i][j]);
         }
       }
-      if (one_tree_reachable_leaves.size() < 1)
+      if (one_tree_reachable_leaves.size() < 1) {
         all_tree_reachable_leaves.clear();
         return all_tree_reachable_leaves;
+      }
       all_tree_reachable_leaves.push_back(one_tree_reachable_leaves);
     }
   }
