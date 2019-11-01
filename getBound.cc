@@ -52,7 +52,6 @@ int main(int argc, char** argv){
 
   if (param.find("bound") != param.end()){
     bound_file = param["bound"];
-    cout << bound_file << " is bound file\n";
   }
 
   if (param.find("inputs") != param.end()){
@@ -135,10 +134,6 @@ int main(int argc, char** argv){
   }
 
   if (num_classes < 2) { num_classes = 2; }
-  cout << "inputs: " << ori_file << "\nmodel: "<< tree_file  << "\nstart_idx: " << start_idx << "\nnum_attack: " << num_attack << "\nmax_clique: " << max_clique << "\nmax_search: " << max_search << "\nmax_level: " << max_level << "\nnum_classes: " << num_classes <<"\ndp: " << dp << "\none_attr: "<< one_attr << "\nonly_attr: "<< only_attr <<'\n';
-  
-  
-  cout << "\nfeature starts at "<< feature_start << "\n";
 
   ifstream bound_data(bound_file);
   json bound_values;
@@ -176,18 +171,15 @@ int main(int argc, char** argv){
       class_label = i % num_classes;
     dfs(model[i], i, no_constr, one_tree_leaves, class_label);
     all_tree_leaves.push_back(one_tree_leaves);
-    cout <<"\n\n" << i <<"th tree\n";
     
   } 
 
   high_resolution_clock::time_point t5 = high_resolution_clock::now(); 
   double avg_bound = 0;
   num_attack = min(int(ori_X.size())-start_idx, num_attack);
-  cout << "number of points: "<< num_attack  << '\n';
   int n_initial_success = 0;
   double last_rob_eps = 1.0;
   for (int n=start_idx; n<num_attack+start_idx; n++){ //loop all points
-    cout << "\n\n\n\n=================start index:" << start_idx << ", num of points:" << num_attack << ", current index:" << n << ", current label: "<< ori_y[n]  <<" =================\n";
     high_resolution_clock::time_point t3 = high_resolution_clock::now();
     vector<bool> rob_log;
     vector<interval_map<int,Interval>> eps_log;
@@ -197,21 +189,14 @@ int main(int argc, char** argv){
       
       bool robust = true;
       if (num_classes <= 2){ 
-        cout << "\n^^^^^^^^^^^^^^^^ binary model  ^^^^^^^^^^^^^^^\n";
         vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], -1, all_tree_leaves, num_classes, max_level, max_clique, feature_start, one_attr, only_attr, dp, feature_bound); 
         
         robust = (ori_y[n]<0.5&&sum_best.back()<0)||(ori_y[n]>0.5&&sum_best.back()>0);
       }
       else{
-        cout << "\n^^^^^^^^^^^^^^^^ " << num_classes  << "  classes model  ^^^^^^^^^^^^^^^\n";
         for (int neg_label=0; neg_label<num_classes; neg_label++){
           if (neg_label != ori_y[n]){
-            cout << "\n^^^^^^^^^^^^^^^^ original class: " << ori_y[n]  << " target class: " << neg_label << " starts ^^^^^^^^^^^^^^^\n";
             vector<double> sum_best = find_multi_level_best_score(ori_X[n], ori_y[n], neg_label, all_tree_leaves, num_classes, max_level, max_clique, feature_start, one_attr, only_attr, dp, feature_bound);
-            cout << "\n best score for each level:\t";
-            for (int i=0;i<sum_best.size(); i++){
-              cout << sum_best[i] <<'\t'; 
-            }
             
             robust = robust && (sum_best.back()>0);
             if (!robust){
@@ -225,7 +210,6 @@ int main(int argc, char** argv){
       if (search_step == 0 && robust) {
         n_initial_success += 1;
       }
-      cout << "Can model be guaranteed robust within this box? (0 for no, 1 for yes): " << robust  <<'\n';
       rob_log.push_back(robust);
       eps_log.push_back(feature_bound);
       if (robust) {
@@ -249,7 +233,6 @@ int main(int argc, char** argv){
       else {
         if (last_unrob<0){ 
           if (current_bound >= 1){
-            cout << "\n eps >=1, break binary search!\n";
             break;
           }
           interval_map<int,Interval> feature_bound_new;
@@ -276,20 +259,19 @@ int main(int argc, char** argv){
           feature_bound = feature_bound_new;
         }
       }
-      cout << "\n**************** this box ends, next box *********************\n";
     }
     
     double clique_bound = 0;
     if (last_rob>=0){
       clique_bound = compute_r(eps_log[last_rob]);
       avg_bound = avg_bound + clique_bound;
+      cout<< "\npoint "<< n << ": robust epsilon is " << clique_bound << " " << endl;
     }
     else{
       cout<< "\npoint "<< n << ": WARNING! no robust eps found, verification bound is set as 0 !!!!!!!!\n";
     }
     high_resolution_clock::time_point t4 = high_resolution_clock::now();
     auto point_duration = duration_cast<microseconds>( t4 - t3).count();
-    cout << "=============================== end of point "<< n  <<", running time: " << point_duration  <<" microseconds, clique res: " << clique_bound << " ====================================" <<'\n';
   }
   double verified_err = 1.0 - n_initial_success / (double)num_attack;
   avg_bound = avg_bound / num_attack; 
