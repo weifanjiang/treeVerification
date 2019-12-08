@@ -1,0 +1,12 @@
+{
+    "inputs":       "data/twitter_spam.test.libsvm",
+    "model":        "models/robust/flex_twitter_spam_v14_nt150d24.json",
+    "bound":        "bound/twitter_spam_v14.json",
+    "feature_start":0,
+    "start_idx":    0,
+    "num_attack":   500,
+    "max_clique":   4,
+    "max_search":   10,
+    "max_level":    1,
+    "num_classes":  2
+}
