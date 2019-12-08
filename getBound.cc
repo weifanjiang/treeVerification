@@ -236,8 +236,14 @@ int main(int argc, char** argv){
       if (last_rob<0) {
         interval_map<int,Interval> feature_bound_new;
         for (interval_map<int, Interval>::const_iterator it = feature_bound.cbegin(); it != feature_bound.cend(); ++it) {
-          double lower = it->second.lower * 0.5;
-          double upper = it->second.upper * 0.5;
+          double lower = it->second.lower;
+          double upper = it->second.upper;
+          if (lower == current_bound) {
+              lower = lower * 0.5;
+          }
+          if (upper == current_bound) {
+              upper = upper * 0.5;
+          }
           Interval current_feature_bound = {lower, upper};
           feature_bound_new[it->first] = current_feature_bound;
         }
