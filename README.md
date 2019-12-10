@@ -2,15 +2,22 @@
 
 Based on https://github.com/chenhongge/treeVerification.
 
-This implements section 3.4 of 1906.03849, which uses a Box instead of a Ball for the ensembled tree model verification. The configuration file (`example.json`) no longer needs an `eps_init` argument, instead it needs a path to a json file that contains initial dimensions of the Box.
+This implements section 3.4 of the paper [Robustness Verification of Tree-based Models](https://arxiv.org/pdf/1906.03849.pdf), which uses a Box instead of a Ball for the ensembled tree model verification.
 
-## Instructions to run
+## Run Verification
 
 ```
-git clone git@github.com:weifanjiang/treeVerification.git
+git clone --recurse-submodules git@github.com:weifanjiang/treeVerification.git
 cd treeVerification
 ./compile.sh
-./treeVerify example.json
+./treeVerify config/twitter_spam_baseline.json
 ```
 
-The above commands run the program with the breast cancer dataset. The initial dimensions of the box is in `breast_cancer_feature_bound.json`.
+## Result
+
+### Result for twitter spam dataset
+
+|| T      | L         | Baseline  | Robust |
+|---| ------------- |-------------| ----- | ----- |
+|l1| 4    | 1 | 5.55112e-15 | 0.0133133 |
+|linf| 4 | 1 | 2.22045e-16 | 0.000532532 |
