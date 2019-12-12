@@ -38,6 +38,40 @@ double compute_r_1(interval_map<int,Interval> box) {
   return dist;
 }
 
+interval_map<int, Interval> box_sum(interval_map<int, Interval> b1, interval_map<int, Interval> b2) {
+  interval_map<int,Interval> sum;
+  for (interval_map<int, Interval>::const_iterator it = b1.cbegin(); it != b1.cend(); ++it) {
+    int key = it->first;
+    double lo = b1.at(key).lower + b2.at(key).lower;
+    double hi = b1.at(key).upper + b2.at(key).upper;
+    Interval sum_bound = {lo, hi};
+    sum[key] = sum_bound;
+  }
+  return sum;
+}
+
+interval_map<int, Interval> box_divide(interval_map<int, Interval> box, int k) {
+  interval_map<int,Interval> div;
+  for (interval_map<int, Interval>::const_iterator it = box.cbegin(); it != box.cend(); ++it) {
+    int key = it->first;
+    double lo = box.at(key).lower / k;
+    double hi = box.at(key).upper / k;
+    Interval div_bound = {lo, hi};
+    div[key] = div_bound;
+  }
+  return div;
+}
+
+string box_to_string(interval_map<int, Interval> box) {
+  stringstream ss;
+  ss << "{";
+  for (auto it = box.begin(); it != box.end(); ++it) {
+    ss << "  " << it->first << ": [" << it->second.lower << ", " << it->second.upper <<"]\n ";
+  }
+  ss << "}\n";
+  return ss.str();
+}
+
 int main(int argc, char** argv){
 
   high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -187,6 +221,8 @@ int main(int argc, char** argv){
   high_resolution_clock::time_point t5 = high_resolution_clock::now(); 
   double avg_bound_inf = 0;
   double avg_bound_1 = 0;
+  interval_map<int, Interval> avg_box;
+  bool initial = false;
   num_attack = min(int(ori_X.size())-start_idx, num_attack);
   int n_initial_success = 0;
   double best_rob_eps_inf = 1.0;
@@ -287,6 +323,11 @@ int main(int argc, char** argv){
       clique_bound_1 = compute_r_1(eps_log[last_rob]);
       avg_bound_inf = avg_bound_inf + clique_bound_inf;
       avg_bound_1 = avg_bound_1 + clique_bound_1;
+      if (!initial) {
+        avg_box = eps_log[last_rob];
+      } else {
+        avg_box = box_sum(avg_box, eps_log[last_rob]);
+      }
       succ_attack_count += 1;
       best_rob_eps_inf = min(best_rob_eps_inf, rob_eps_inf);
       best_rob_eps_1 = min(best_rob_eps_1, rob_eps_1);
@@ -302,10 +343,13 @@ int main(int argc, char** argv){
   double verified_err = 1.0 - n_initial_success / (double)num_attack;
   avg_bound_inf = avg_bound_inf / succ_attack_count; 
   avg_bound_1 = avg_bound_1 / succ_attack_count;
+  avg_box = box_divide(avg_box, succ_attack_count);
   cout << "\nclique method average linf bound:" << avg_bound_inf << endl;
   cout << "\nclique method average l1 bound:" << avg_bound_1 << endl;
   cout << "\nclique method best linf bound:" << best_rob_eps_inf << endl;
   cout << "\nclique method best l1 bound:" << best_rob_eps_1 << endl;
+  string avg_box_string = box_to_string(avg_box);
+  cout << "\n display average box:\n" << avg_box_string << "\n" << endl;
   cout << "verified error at initial box = " << verified_err << endl;
   high_resolution_clock::time_point t2 = high_resolution_clock::now();
   auto total_duration = duration_cast<microseconds>( t2 - t1 ).count();
